@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>       
+    <style>
+    textarea {overflow-y: scroll;}    
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>  
+    {% if access_token %}
+    <h2>Welcome {{ user }}!</h2>
+     {% endif %}
+     
+    <ul>
+    {% if not access_token %}
+    <li><a href="{% url 'azure_auth:login' %}">Login</a></li> 
+    {% else %}
+    <li><b>Microsoft EntraID</b></li>
+    <ul>
+        <li><u>Microsoft EntraID Access Token:</u> <i>{{ access_token }}</i></li>    
+        <li><u>Graph Token expires in:</u> {{ expires_in }} seconds</li>     
+        <li><a href='/me'>Me</a></li>
+        <li><a href='/memberOf'>MemberOf</a></li>
+    </ul>
+    <li><b>Microsoft Fabric</b></li>
+    <ul>
+        <li><u>Fabric Token:</u> <i>{{ fabric_token }}</i></li>
+        <li><u>Fabric Token expires in:</u><i>{{ fabric_expires_in }} seconds</i></li>
+        <li><a href='/startLivySession'>Start Livy Session</a> {{ fabric_session_id }}</li>
+        {% if fabric_session_id %}         
+        <li><a href='/checkLivySession'>Check Livy Session</a> (needs to be <b>idle</b> before sending remote Spark code)</li>     
+        <li>Send Spark Code to Fabric-Livy(Remote): <br/>
+            <form id="FabricForm" action="submitFabricCode" method="post">{% csrf_token %}
+                <textarea cols="60" rows="12" id="fabric_livy_code" name="fabric_livy_code">
+from pyspark.sql import SparkSession
+
+# Initialize SparkSession
+spark = SparkSession.builder \
+    .appName("Sample DataFrame Creation") \
+    .getOrCreate()
+
+df = spark.createDataFrame([{"id": 1, "name": "MyName"}])
+
+df.show()
+                </textarea>
+                <input type="submit" value="Submit">
+            </form>
+        </li>
+        <li>Fabric-Livy Statements</li>
+        <ul>            
+            {% for fabric_statement_id in fabric_statement_ids %}
+            <li><a href="/getStatement?id={{ fabric_statement_id }}">Statement ID {{ fabric_statement_id }}</a></li>
+            {% endfor %}            
+        </ul>
+        <li><a href='/stopLivySession'>Stop Livy Session</a></li>
+    </ul>
+    {% endif %}   
+    <li><a href="{% url 'azure_auth:logout' %}">Logout</a></li>      
+    </ul>    
+    {% endif %}    
+</body>
+</html>
+
