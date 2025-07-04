@@ -1,5 +1,5 @@
 # django-azure-auth-ms-fabric
-Running Spark using Microsoft Fabric Livy endpoint. Based on Django authentication and using django-azure-auth
+Running Spark using Apache Livy/Microsoft Fabric Livy endpoint. Based on Django authentication and using django-azure-auth
 
 ## Requirements
 - Create an EntraID application and apply the following settings
@@ -28,7 +28,9 @@ Running Spark using Microsoft Fabric Livy endpoint. Based on Django authenticati
     - **ROLES** = '{"My_Admin_Entra_Group_ObjectID": "Administrators", "My_Editors_Entra_Group_ObjectID": "Editors", "My_Viewers_Entra_Group_ObjectID": "Viewers"}' This will map the groups you defined on EntraID side with the groups you create in Django admin
     - **GRAPH_USER_ENDPOINT** = "https://graph.microsoft.com/v1.0/me"
     - **GRAPH_MEMBER_ENDPOINT** = "https://graph.microsoft.com/v1.0/me/memberOf"
-    - **LIVY_ENDPOINT** = "https://api.fabric.microsoft.com/v1/workspaces/MyWorkSpaceID/lakehouses/MyLakeHouseID/livyapi/versions/2023-12-01/sessions"
+    - **LIVY_BASE_ENDPOINT** = "https://api.fabric.microsoft.com/v1/workspaces/MyWorkSpaceID/lakehouses/MyLakeHouseID/livyapi/versions/2023-12-01"
+    - **LIVY_SESSION_TTL**: The timeout in seconds for an inactive session, example: 600 (10 minutes). This parameter seems not affecting a Microsoft Fabric session and by default the session is *"isSessionTimedOut": "false"*.
+    - **LIVY_REQUESTS_TIMEOUT**: The timeout in seconds for the Livy REST API requests
     - **Environment_ID**: optional, you can get the environment ID from your Fabric workspace using the REST API: https://learn.microsoft.com/en-us/rest/api/fabric/environment/items/list-environments?tabs=HTTP. If no Environment_ID is specified, the session will default to the workspace's default environment on the default pool. For faster startup experience, sessions can use the starter pool, a medium-sized and prehydrated live pool that is automatically created for each workspace. More information for starter pools can be found here: https://learn.microsoft.com/en-us/fabric/data-engineering/configure-starter-pools
 - Create groups on Django admin
     - Disable *AUTHENTICATION_BACKENDS = ("azure_auth.backends.AzureBackend",)* on the *settings.py** file

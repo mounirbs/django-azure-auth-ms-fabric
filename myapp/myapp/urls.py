@@ -25,10 +25,10 @@ urlpatterns = [
     path('', views.index),
     path("me", views.me),
     path("memberOf", views.memberOf),
-    path("startLivySession", views.startLivySession),
+    path("createLivySession", views.createLivySession),
     path("checkLivySession", views.checkLivySession),
-    path("submitFabricCode", views.submitFabricCode),
-    path("getStatement", views.getStatement),
+    path("submitLivyStatement", views.submitLivyStatement),
+    path("getLivyStatement", views.getLivyStatement),
     path("stopLivySession", views.stopLivySession),      
     path("logout", views.index),  
 ]

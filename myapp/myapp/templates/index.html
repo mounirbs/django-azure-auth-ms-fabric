@@ -24,16 +24,16 @@
         <li><a href='/me'>Me</a></li>
         <li><a href='/memberOf'>MemberOf</a></li>
     </ul>
-    <li><b>Microsoft Fabric</b></li>
+    <li><b>Apache Livy/Fabric</b></li>
     <ul>
-        <li><u>Fabric Token:</u> <i>{{ fabric_token }}</i></li>
-        <li><u>Fabric Token expires in:</u><i>{{ fabric_expires_in }} seconds</i></li>
-        <li><a href='/startLivySession'>Start Livy Session</a> {{ fabric_session_id }}</li>
-        {% if fabric_session_id %}         
+        <li><u>Livy Token:</u> <i>{{ livy_token }}</i></li>
+        <li><u>Livy Token expires in:</u><i>{{ livy_expires_in }} seconds</i></li>
+        <li><a href='/createLivySession'>Start Livy Session</a> {{ livy_session_id }}</li>
+        {% if livy_session_id %}         
         <li><a href='/checkLivySession'>Check Livy Session</a> (needs to be <b>idle</b> before sending remote Spark code)</li>     
-        <li>Send Spark Code to Fabric-Livy(Remote): <br/>
-            <form id="FabricForm" action="submitFabricCode" method="post">{% csrf_token %}
-                <textarea cols="60" rows="12" id="fabric_livy_code" name="fabric_livy_code">
+        <li>Send Spark Code to Livy(Remote): <br/>
+            <form id="LivyForm" action="submitLivyStatement" method="post">{% csrf_token %}
+                <textarea cols="60" rows="12" id="livy_code" name="livy_code">
 from pyspark.sql import SparkSession
 
 # Initialize SparkSession
@@ -48,10 +48,10 @@ df.show()
                 <input type="submit" value="Submit">
             </form>
         </li>
-        <li>Fabric-Livy Statements</li>
+        <li>Livy Statements</li>
         <ul>            
-            {% for fabric_statement_id in fabric_statement_ids %}
-            <li><a href="/getStatement?id={{ fabric_statement_id }}">Statement ID {{ fabric_statement_id }}</a></li>
+            {% for livy_statement_id in livy_statement_ids %}
+            <li><a href="/getLivyStatement?id={{ livy_statement_id }}">Statement ID {{ livy_statement_id }}</a></li>
             {% endfor %}            
         </ul>
         <li><a href='/stopLivySession'>Stop Livy Session</a></li>
