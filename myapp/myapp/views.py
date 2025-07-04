@@ -1,16 +1,26 @@
+import time
 from azure_auth.decorators import azure_auth_required
 from django.shortcuts import HttpResponse, render
 from django.http import JsonResponse
 import requests
 import json
+from datetime import datetime, timedelta
 from azure_auth.handlers import AuthHandler
 import msal
+from tomlkit import date
 from myapp.api.apache_livy import ApacheLivy
 
 from dotenv import load_dotenv
 import os
 # Load environment variables from .env file
 load_dotenv()
+graph_user_endpoint = os.getenv('GRAPH_USER_ENDPOINT')
+graph_member_endpoint = os.getenv('GRAPH_MEMBER_ENDPOINT')
+livy_base_url = os.getenv("LIVY_BASE_ENDPOINT")
+livy_requests_timeout = int(os.getenv("LIVY_REQUESTS_TIMEOUT"))
+livy_session_name_prefix = os.getenv("LIVY_SESSION_NAME_PREFIX")
+livy_spark_conf = os.getenv('LIVY_SPARK_CONF')
+livy_session_ttl = int(os.getenv("LIVY_SESSION_TTL"))
 
 title = "Apache Livy/Microsoft Fabric - Spark remote execution. Authentication using Microsoft EntraID with django-azure-auth"
 
@@ -28,8 +38,9 @@ def index(request):
         access_token = AuthHandler(request).get_token_from_cache()['access_token']        
         expires_in = AuthHandler(request).get_token_from_cache()['expires_in']     
         user = AuthHandler(request).claims['name']
+        
         livy_token = request.session.get('livy_token', None)
-        livy_expires_in = request.session.get('livy_expires_in', None)    
+        livy_token_expiration_time = request.session.get('livy_token_expiration_time', None)
         livy_session_id = request.session.get('livy_session_id', None) 
         livy_statement_ids = request.session.get('livy_statement_ids', None)      
     else:       
@@ -37,7 +48,7 @@ def index(request):
         user = None
         expires_in = None
         livy_token = None
-        livy_expires_in = None
+        livy_token_expiration_time = None
         livy_session_id = None
         livy_statement_ids = None
         
@@ -46,7 +57,7 @@ def index(request):
         user = user,
         expires_in = expires_in,
         livy_token = livy_token,  
-        livy_expires_in = livy_expires_in,
+        livy_expires_in = str(int((datetime.strptime(livy_token_expiration_time, "%Y-%m-%d %H:%M:%S") - datetime.now()).total_seconds())) if livy_token_expiration_time else None,
         livy_session_id = livy_session_id,
         livy_statement_ids = livy_statement_ids,
         title = title,
@@ -65,7 +76,7 @@ def login(request):
 @azure_auth_required
 def me(request):
     api_result = requests.get(  # Use access token to call a web api
-        os.getenv('GRAPH_USER_ENDPOINT'),  
+        graph_user_endpoint,  
         headers={'Authorization': 'Bearer ' + AuthHandler(request).get_token_from_cache()['access_token']},
         timeout=30,
     ).json() if AuthHandler(request).user_is_authenticated else "Not authenticated"
@@ -77,7 +88,7 @@ def me(request):
 @azure_auth_required
 def memberOf(request):
     api_result = requests.get(  # Use access token to call a web api
-         os.getenv('GRAPH_MEMBER_ENDPOINT'),
+        graph_member_endpoint,
         headers={'Authorization': 'Bearer ' + AuthHandler(request).get_token_from_cache()['access_token']},
         timeout=30,
     ).json() if AuthHandler(request).user_is_authenticated else "Not authenticated"
@@ -89,44 +100,38 @@ def memberOf(request):
         "title": "Result of Member Of",
         "content": json.dumps(memberOf, indent=4)
     }) 
- 
+
+
+@azure_auth_required
+def requestFabricToken(request):
+
+    livy_token = getFabricToken(request)
+    return render(request, 'display.html', {
+            "title": "Result of Fabric request token",
+            "content": "Fabric Token: " + livy_token     
+        }) 
+    
 @azure_auth_required
 def createLivySession(request):      
     try:
-        # Get a Livy Token
-        if(request.session.get('livy_token')):
-             livy_token = request.session.get('livy_token')             
-        else:
-            accounts = AuthHandler(request).msal_app.get_accounts()
-            fabric_result = AuthHandler(request).msal_app.acquire_token_silent(
-                    scopes=["https://api.fabric.microsoft.com/.default"], account=accounts[0]
-                )
-            livy_token = fabric_result['access_token']
-            request.session['livy_token'] = livy_token
-            request.session['livy_expires_in'] = fabric_result['expires_in']            
-        
         # Get a Livy session ID
         if(request.session.get('livy_session_id')):
             livy_session_id = request.session.get('livy_session_id')
             sessionExists = "Already exists, "
         else:            
             sessionExists = ""
-            Environment_ID = os.getenv('Environment_ID')
-            if(Environment_ID):
-                # Important: Run against a specific environment. Session starts slower.
-                conf = {"spark.fabric.environmentDetails": json.dumps({"id": Environment_ID })}
-            else:
-                # Important: Run against the default starter pool for the workspace. Session starts faster.
-                conf = {}
-            
-            # Create a session
-            api_result = ApacheLivy(base_url=os.getenv("LIVY_BASE_ENDPOINT"), access_token=livy_token, timeout=int(os.getenv("LIVY_REQUESTS_TIMEOUT"))).create_session(
+                        
+            # Create a session  
+            livy_token = getFabricToken(request)        
+            livy = livyGetOrCreate(livy_token)
+            api_result = livy.create_session(
                 data={
-                    # Use unique session name, something like: G-Link_ClientName/UserName_DateTime
-                    "name": "G-link test pyspark session using Livy",
-                    "archives": [],                    
-                    "conf": conf,
-                    "ttl" : int(os.getenv("LIVY_SESSION_TTL")),  # Set the session TTL (in seconds)
+                    # Ideally, use unique session name
+                    "name": livy_session_name_prefix + datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "kind": "pyspark",
+                    "archives": [],                      
+                    "conf": livy_spark_conf,
+                    "ttl" : livy_session_ttl,  # Set the session TTL (in seconds)
                     "tags": {
                     }
                     }
@@ -151,12 +156,13 @@ def createLivySession(request):
 @azure_auth_required
 def checkLivySession(request):      
     try:
-        # Check Livy Token and Livy Session ID        
-        if(request.session.get('livy_token') and request.session.get('livy_session_id')):
-            livy_token = request.session.get('livy_token')
+        # Check Livy Session ID        
+        if(request.session.get('livy_session_id')):            
             livy_session_id = request.session.get('livy_session_id')
-           
-            api_result = ApacheLivy(base_url=os.getenv("LIVY_BASE_ENDPOINT"), access_token=livy_token, timeout=int(os.getenv("LIVY_REQUESTS_TIMEOUT"))).get_session(livy_session_id)
+            
+            livy_token = getFabricToken(request) 
+            livy = livyGetOrCreate(livy_token)           
+            api_result = livy.get_session(livy_session_id)
             
             livy_state_session = api_result.json()
             api_result.raise_for_status()  # Check for HTTP errors
@@ -181,12 +187,13 @@ def checkLivySession(request):
 def submitLivyStatement(request):
     livy_code = request.POST.get('livy_code', None)
     try:
-        # Check Livy Token and Livy Session ID        
-        if(request.session.get('livy_token') and request.session.get('livy_session_id')):
-            livy_token = request.session.get('livy_token')
+        # Check Lvy Session ID        
+        if(request.session.get('livy_session_id')):
             livy_session_id = request.session.get('livy_session_id')
-
-            api_result = ApacheLivy(base_url=os.getenv("LIVY_BASE_ENDPOINT"), access_token=livy_token, timeout=int(os.getenv("LIVY_REQUESTS_TIMEOUT"))).submit_statement(livy_session_id, livy_code)
+            
+            livy_token = getFabricToken(request) 
+            livy = livyGetOrCreate(livy_token)
+            api_result = livy.submit_statement(livy_session_id, livy_code)
             
             if('id' in api_result.json()):
                 livy_statement_id = api_result.json()['id']
@@ -224,13 +231,15 @@ def submitLivyStatement(request):
 @azure_auth_required
 def getLivyStatement(request):      
     try:
-        # Check Livy Token and Livy Session ID        
-        if(request.session.get('livy_token') and request.session.get('livy_session_id')):
-            livy_token = request.session.get('livy_token')
+        # Check Livy Session ID        
+        if(request.session.get('livy_session_id')):
             livy_session_id = request.session.get('livy_session_id')
 
             statement_id = request.GET.get('id', None)
-            api_result = ApacheLivy(base_url=os.getenv("LIVY_BASE_ENDPOINT"), access_token=livy_token, timeout=int(os.getenv("LIVY_REQUESTS_TIMEOUT"))).get_statement(livy_session_id,statement_id)
+            
+            livy_token = getFabricToken(request) 
+            livy = livyGetOrCreate(livy_token)
+            api_result = livy.get_statement(livy_session_id,statement_id)
                     
             livy_statement = api_result.json()
             api_result.raise_for_status()  # Check for HTTP errors
@@ -262,17 +271,17 @@ def getLivyStatement(request):
 @azure_auth_required
 def stopLivySession(request):      
     try:
-        # Check Livy Token and Livy Session ID        
-        if(request.session.get('livy_token') and request.session.get('livy_session_id')):
-            livy_token = request.session.get('livy_token')
+        # Check Livy Session ID        
+        if(request.session.get('livy_session_id')):
             livy_session_id = request.session.get('livy_session_id')
             
-            api_result = ApacheLivy(base_url=os.getenv("LIVY_BASE_ENDPOINT"), access_token=livy_token, timeout=int(os.getenv("LIVY_REQUESTS_TIMEOUT"))).delete_session(livy_session_id)
+            livy_token = getFabricToken(request) 
+            livy = livyGetOrCreate(livy_token)
+            api_result = livy.delete_session(livy_session_id)
             api_result.raise_for_status()  # Check for HTTP errors
             
-            # drop the Livy session id and the statements from the session (if result 200)
-            request.session['livy_session_id'] = None
-            request.session['livy_statement_ids'] = None
+            # Clean session  (if result 200)
+            cleanLivySession(request)
             
             return render(request, 'display.html', {
                 "title": "Result of Livy delete session",
@@ -295,11 +304,54 @@ def logout(request):
     # Stop the Livy Session - stopLivySession
     stopLivySession(request)
     
-    # Clean session
-    request.session['livy_session_id'] = None
-    request.session['access_token'] = None
-    request.session['livy_statement_ids'] = None
+    # Clean Livy Token
+    cleanLivyToken(request)
+    
+    # Clean the Graph token
+    request.session['access_token'] = None    
     
     return render(request, 'index.html', dict(         
         title = title,        
     ))
+
+def getFabricToken(request):
+    try:
+        # Get a Livy Token
+        if(request.session.get('livy_token') and 
+           request.session.get('livy_token_expiration_time') and 
+           int((datetime.strptime(request.session.get('livy_token_expiration_time'), "%Y-%m-%d %H:%M:%S") - datetime.now()).total_seconds()) > 0):
+            
+            # Token is still valid
+            livy_token = request.session.get('livy_token')             
+        else:
+            accounts = AuthHandler(request).msal_app.get_accounts()
+            fabric_result = AuthHandler(request).msal_app.acquire_token_silent(
+                    scopes=["https://api.fabric.microsoft.com/.default"], account=accounts[0]
+                )
+            livy_token = fabric_result['access_token']
+            request.session['livy_token'] = livy_token
+            request.session['livy_token_expiration_time'] = (datetime.now() + timedelta(seconds=int(fabric_result['expires_in']))).strftime("%Y-%m-%d %H:%M:%S")
+                        
+        return livy_token
+    except requests.exceptions.RequestException as e:
+        # production - use logs
+        print("Error getting Fabric token:", str(e))
+        return None
+            
+def cleanLivySession(request):
+    request.session['livy_session_id'] = None  
+    request.session['livy_statement_ids'] = None
+    
+def cleanLivyToken(request):
+    request.session['livy_token'] = None
+    request.session['livy_token_expiration_time'] = None
+    
+def livyGetOrCreate(access_token):
+    global livy
+    # Check if livy is already initialized
+    if 'livy' in globals():
+        return livy
+    else:
+        # Initialize livy with the provided parameters
+        livy = ApacheLivy(base_url=livy_base_url, access_token=access_token, timeout=livy_requests_timeout)
+        return livy

@@ -29,9 +29,11 @@ Running Spark using Apache Livy/Microsoft Fabric Livy endpoint. Based on Django 
     - **GRAPH_USER_ENDPOINT** = "https://graph.microsoft.com/v1.0/me"
     - **GRAPH_MEMBER_ENDPOINT** = "https://graph.microsoft.com/v1.0/me/memberOf"
     - **LIVY_BASE_ENDPOINT** = "https://api.fabric.microsoft.com/v1/workspaces/MyWorkSpaceID/lakehouses/MyLakeHouseID/livyapi/versions/2023-12-01"
-    - **LIVY_SESSION_TTL**: The timeout in seconds for an inactive session, example: 600 (10 minutes). This parameter seems not affecting a Microsoft Fabric session and by default the session is *"isSessionTimedOut": "false"*.
+    - **LIVY_SESSION_TTL**: The timeout in seconds for an inactive session, example: 600 (10 minutes).
     - **LIVY_REQUESTS_TIMEOUT**: The timeout in seconds for the Livy REST API requests
-    - **Environment_ID**: optional, you can get the environment ID from your Fabric workspace using the REST API: https://learn.microsoft.com/en-us/rest/api/fabric/environment/items/list-environments?tabs=HTTP. If no Environment_ID is specified, the session will default to the workspace's default environment on the default pool. For faster startup experience, sessions can use the starter pool, a medium-sized and prehydrated live pool that is automatically created for each workspace. More information for starter pools can be found here: https://learn.microsoft.com/en-us/fabric/data-engineering/configure-starter-pools
+    - **LIVY_SESSION_NAME_PREFIX**: A prefix to use for session names. Example: MyApp-. A datetime will be appended to this prefix name
+    - **LIVY_SPARK_CONF**: Custom Spark Configuration.
+    For Microsoft Fabric only, an environmentID can be enabled using the Spark configuration *'{"spark.fabric.environmentDetails": {"id": "My_EnvironmentID" }}'*. You can get the environment ID from your Fabric workspace using the REST API: https://learn.microsoft.com/en-us/rest/api/fabric/environment/items/list-environments?tabs=HTTP. If no Environment_ID is specified, the session will default to the workspace's default environment on the default pool. For faster startup experience, sessions can use the Starter Pool, a medium-sized and prehydrated live pool that is automatically created for each workspace. More information for Starter Pools can be found here: https://learn.microsoft.com/en-us/fabric/data-engineering/configure-starter-pools
 - Create groups on Django admin
     - Disable *AUTHENTICATION_BACKENDS = ("azure_auth.backends.AzureBackend",)* on the *settings.py** file
     - Create an admin account using ```python manage.py createsuperuser```

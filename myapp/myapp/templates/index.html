@@ -26,8 +26,12 @@
     </ul>
     <li><b>Apache Livy/Fabric</b></li>
     <ul>
-        <li><u>Livy Token:</u> <i>{{ livy_token }}</i></li>
-        <li><u>Livy Token expires in:</u><i>{{ livy_expires_in }} seconds</i></li>
+        <li><a href='/requestFabricToken'>Request Fabric Token</a></li>
+        <ul>
+            <li><u>Livy Token:</u> <i>{{ livy_token }}</i></li>
+            <li><u>Livy Token expires in:</u><i>{{ livy_expires_in }} seconds</i></li>
+        </ul>
+        {% if livy_token %}      
         <li><a href='/createLivySession'>Start Livy Session</a> {{ livy_session_id }}</li>
         {% if livy_session_id %}         
         <li><a href='/checkLivySession'>Check Livy Session</a> (needs to be <b>idle</b> before sending remote Spark code)</li>     
@@ -56,6 +60,7 @@ df.show()
         </ul>
         <li><a href='/stopLivySession'>Stop Livy Session</a></li>
     </ul>
+    {% endif %}
     {% endif %}   
     <li><a href="{% url 'azure_auth:logout' %}">Logout</a></li>      
     </ul>    
