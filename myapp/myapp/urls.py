@@ -25,7 +25,7 @@ urlpatterns = [
     path('', views.index),
     path("me", views.me),
     path("memberOf", views.memberOf),
-    path("requestFabricToken", views.requestFabricToken),
+    path("requestLivyFabricToken", views.requestLivyFabricToken),
     path("createLivySession", views.createLivySession),
     path("checkLivySession", views.checkLivySession),
     path("submitLivyStatement", views.submitLivyStatement),

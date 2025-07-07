@@ -26,7 +26,8 @@
     </ul>
     <li><b>Apache Livy/Fabric</b></li>
     <ul>
-        <li><a href='/requestFabricToken'>Request Fabric Token</a></li>
+        <li><u>Livy Backend:</u> <i>{{ livy_backend }}</i></li>
+        <li><a href='/requestLivyFabricToken'>Request Livy/Fabric Token</a></li>
         <ul>
             <li><u>Livy Token:</u> <i>{{ livy_token }}</i></li>
             <li><u>Livy Token expires in:</u><i>{{ livy_expires_in }} seconds</i></li>
@@ -37,7 +38,7 @@
         <li><a href='/checkLivySession'>Check Livy Session</a> (needs to be <b>idle</b> before sending remote Spark code)</li>     
         <li>Send Spark Code to Livy(Remote): <br/>
             <form id="LivyForm" action="submitLivyStatement" method="post">{% csrf_token %}
-                <textarea cols="60" rows="12" id="livy_code" name="livy_code">
+                <textarea cols="120" rows="12" id="livy_code" name="livy_code">
 from pyspark.sql import SparkSession
 
 # Initialize SparkSession

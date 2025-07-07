@@ -28,8 +28,8 @@ Running Spark using Apache Livy/Microsoft Fabric Livy endpoint. Based on Django 
     - **ROLES** = '{"My_Admin_Entra_Group_ObjectID": "Administrators", "My_Editors_Entra_Group_ObjectID": "Editors", "My_Viewers_Entra_Group_ObjectID": "Viewers"}' This will map the groups you defined on EntraID side with the groups you create in Django admin
     - **GRAPH_USER_ENDPOINT** = "https://graph.microsoft.com/v1.0/me"
     - **GRAPH_MEMBER_ENDPOINT** = "https://graph.microsoft.com/v1.0/me/memberOf"
-    - **LIVY_BASE_ENDPOINT** = "https://api.fabric.microsoft.com/v1/workspaces/MyWorkSpaceID/lakehouses/MyLakeHouseID/livyapi/versions/2023-12-01"
-    - **LIVY_SESSION_TTL**: The timeout in seconds for an inactive session, example: 600 (10 minutes).
+    - **LIVY_BACKEND**: Possible values "apache" or "fabric"
+    - **LIVY_BASE_ENDPOINT** = "https://api.fabric.microsoft.com/v1/workspaces/MyWorkSpaceID/lakehouses/MyLakeHouseID/livyapi/versions/2023-12-01". Replace MyWorkSpaceID and MyLakeHouseID with the right values. You can also use an Apache Livy endpoint, fo example for local tests: http://localhost:8998
     - **LIVY_REQUESTS_TIMEOUT**: The timeout in seconds for the Livy REST API requests
     - **LIVY_SESSION_NAME_PREFIX**: A prefix to use for session names. Example: MyApp-. A datetime will be appended to this prefix name
     - **LIVY_SPARK_CONF**: Custom Spark Configuration.
@@ -63,8 +63,12 @@ python manage.py runserver localhost:5000
 ```
 
 ## Important
-You need to manage the Fabric token expiration as well as the Livy session timeout (ttl, see Apache Livy reference bellow)
+- You need to manage the Fabric token expiration as well as the Livy session timeout (ttl, see Apache Livy reference bellow)
+- If using Apache Livy 0.8, consider running some java_import before running any Spark code. See: https://github.com/mounirbs/spark-livy/blob/main/python/livy/init_java_gateway.py#L11
+- both ttl and idleTimeout seems not working properly in Fabric/Apache Livy. For Apache Livy, the binaries from https://livy.apache.org/download/ where used. Maybe the binaries are not reflecting the code on the Apache Livy master branch: https://livy.incubator.apache.org/docs/latest/rest-api.html. Without using these parameters, the session does not timeout.
+- The code is not production ready, since it's not handling fully all the required exceptions. This is only a proof-of-concept!
 
 ## Reference
 - https://learn.microsoft.com/en-us/fabric/data-engineering/get-started-api-livy-session
-- https://livy.incubator.apache.org/docs/latest/rest-api.html
+- https://github.com/apache/incubator-livy/blob/master/docs/rest-api.md
+- https://livy.incubator.apache.org/docs/latest/rest-api.html (not up to date, idleTimeout is not there)

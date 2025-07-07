@@ -45,7 +45,7 @@ Batches API:
 
 See each method's docstring for details.
 """
-import requests
+import requests, json
 
 class ApacheLivy:
     """
