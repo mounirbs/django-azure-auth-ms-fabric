@@ -65,14 +65,14 @@ python manage.py runserver localhost:5000
 
 ## Important
 - You need to manage the Fabric token expiration as well as the Livy session timeout (ttl, see Apache Livy reference bellow)
-- If using Apache Livy 0.8, consider running some java_import before running any Spark code. See: https://github.com/mounirbs/spark-livy/blob/main/python/livy/init_java_gateway.py#L11
-- both ttl and idleTimeout seems not working properly in Fabric/Apache Livy. For Apache Livy, the binaries from https://livy.apache.org/download/ where used. Maybe the binaries are not reflecting the code on the Apache Livy master branch: https://livy.incubator.apache.org/docs/latest/rest-api.html. Without using these parameters, the session does not timeout.
+- If using Apache Livy 0.8, consider running some java_import before running any Spark code. See: [https://github.com/mounirbs/spark-livy/blob/main/python/livy/init_java_gateway.py#L11](https://github.com/mounirbs/spark-livy/blob/main/python/livy/init_java_gateway.py#L11) 
+- Both ttl and idleTimeout seems not working properly in Fabric/Apache Livy. For Apache Livy, the binaries from https://livy.apache.org/download/ where used. Maybe the binaries are not reflecting the code on the Apache Livy master branch: [https://livy.incubator.apache.org/docs/latest/rest-api.html](https://github.com/apache/incubator-livy/blob/master/docs/rest-api.md). Without using these parameters, the session does not timeout.
 - The code is not production ready, since it's not handling fully all the required exceptions. This is only a proof-of-concept!
 - Installing packages in Fabric:
     - From the environment running all the sessions (can be managed on Fabric side).
     - From the session: using the LIVY_SPARK_DEPENDENCIES environment variable, a list of comma separated absolute paths to the Python packages to be used in the Spark session.    
 
 ## Reference
-- https://learn.microsoft.com/en-us/fabric/data-engineering/get-started-api-livy-session
-- https://github.com/apache/incubator-livy/blob/master/docs/rest-api.md
-- https://livy.incubator.apache.org/docs/latest/rest-api.html (not up to date, idleTimeout is not there)
+- [https://learn.microsoft.com/en-us/fabric/data-engineering/get-started-api-livy-session](https://learn.microsoft.com/en-us/fabric/data-engineering/get-started-api-livy-session)
+- [https://github.com/apache/incubator-livy/blob/master/docs/rest-api.md](https://github.com/apache/incubator-livy/blob/master/docs/rest-api.md)
+- [https://livy.incubator.apache.org/docs/latest/rest-api.html](https://livy.incubator.apache.org/docs/latest/rest-api.html) (not up to date, idleTimeout is not there)
