@@ -32,8 +32,9 @@ Running Spark using Apache Livy/Microsoft Fabric Livy endpoint. Based on Django 
     - **LIVY_BASE_ENDPOINT** = "https://api.fabric.microsoft.com/v1/workspaces/MyWorkSpaceID/lakehouses/MyLakeHouseID/livyapi/versions/2023-12-01". Replace MyWorkSpaceID and MyLakeHouseID with the right values. You can also use an Apache Livy endpoint, fo example for local tests: http://localhost:8998
     - **LIVY_REQUESTS_TIMEOUT**: The timeout in seconds for the Livy REST API requests
     - **LIVY_SESSION_NAME_PREFIX**: A prefix to use for session names. Example: MyApp-. A datetime will be appended to this prefix name
-    - **LIVY_SPARK_CONF**: Custom Spark Configuration.
-    For Microsoft Fabric only, an environmentID can be enabled using the Spark configuration *'{"spark.fabric.environmentDetails": {"id": "My_EnvironmentID" }}'*. You can get the environment ID from your Fabric workspace using the REST API: https://learn.microsoft.com/en-us/rest/api/fabric/environment/items/list-environments?tabs=HTTP. If no Environment_ID is specified, the session will default to the workspace's default environment on the default pool. For faster startup experience, sessions can use the Starter Pool, a medium-sized and prehydrated live pool that is automatically created for each workspace. More information for Starter Pools can be found here: https://learn.microsoft.com/en-us/fabric/data-engineering/configure-starter-pools
+    - **LIVY_SPARK_CONF**: Optional custom Spark Configuration.
+    For Microsoft Fabric only, an environmentID can be enabled using the Spark configuration *"{\"spark.fabric.environmentDetails\": {\"id\": \"My_EnvironmentID\"}}"*. You can get the environment ID from your Fabric workspace using the REST API: https://learn.microsoft.com/en-us/rest/api/fabric/environment/items/list-environments?tabs=HTTP. If no Environment_ID is specified, the session will default to the workspace's default environment on the default pool. For faster startup experience, sessions can use the Starter Pool, a medium-sized and prehydrated live pool that is automatically created for each workspace. More information for Starter Pools can be found here: https://learn.microsoft.com/en-us/fabric/data-engineering/configure-starter-pools
+    - **LIVY_SPARK_DEPENDENCIES**: Optional, a comma separated absolute paths to the Python packages to be used in the Spark session. For example: *"abfss://...path-to.../Files/packages/mypackage-0.1.0-py3-none-any.whl"*
 - Create groups on Django admin
     - Disable *AUTHENTICATION_BACKENDS = ("azure_auth.backends.AzureBackend",)* on the *settings.py** file
     - Create an admin account using ```python manage.py createsuperuser```
@@ -67,6 +68,9 @@ python manage.py runserver localhost:5000
 - If using Apache Livy 0.8, consider running some java_import before running any Spark code. See: https://github.com/mounirbs/spark-livy/blob/main/python/livy/init_java_gateway.py#L11
 - both ttl and idleTimeout seems not working properly in Fabric/Apache Livy. For Apache Livy, the binaries from https://livy.apache.org/download/ where used. Maybe the binaries are not reflecting the code on the Apache Livy master branch: https://livy.incubator.apache.org/docs/latest/rest-api.html. Without using these parameters, the session does not timeout.
 - The code is not production ready, since it's not handling fully all the required exceptions. This is only a proof-of-concept!
+- Installing packages in Fabric:
+    - From the environment running all the sessions (can be managed on Fabric side).
+    - From the session: using the LIVY_SPARK_DEPENDENCIES environment variable, a list of comma separated absolute paths to the Python packages to be used in the Spark session.    
 
 ## Reference
 - https://learn.microsoft.com/en-us/fabric/data-engineering/get-started-api-livy-session

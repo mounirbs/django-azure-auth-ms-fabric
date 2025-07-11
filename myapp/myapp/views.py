@@ -19,8 +19,9 @@ graph_member_endpoint = os.getenv('GRAPH_MEMBER_ENDPOINT')
 livy_base_url = os.getenv("LIVY_BASE_ENDPOINT")
 livy_requests_timeout = int(os.getenv("LIVY_REQUESTS_TIMEOUT"))
 livy_session_name_prefix = os.getenv("LIVY_SESSION_NAME_PREFIX")
-livy_spark_conf = os.getenv('LIVY_SPARK_CONF')
+livy_spark_conf = os.getenv('LIVY_SPARK_CONF') if os.getenv('LIVY_SPARK_CONF') else "{}"
 livy_backend = os.getenv("LIVY_BACKEND").strip().lower()
+livy_backend_spark_dependencies = os.getenv("LIVY_SPARK_DEPENDENCIES") if os.getenv("LIVY_SPARK_DEPENDENCIES") else ""
 
 title = "Apache Livy/Microsoft Fabric - Spark remote execution. Authentication using Microsoft EntraID with django-azure-auth"
 
@@ -42,7 +43,8 @@ def index(request):
         livy_token = request.session.get('livy_token', None)
         livy_token_expiration_time = request.session.get('livy_token_expiration_time', None)
         livy_session_id = request.session.get('livy_session_id', None) 
-        livy_statement_ids = request.session.get('livy_statement_ids', None)      
+        livy_statement_ids = request.session.get('livy_statement_ids', None)  
+        
     else:       
         access_token = None 
         user = None
@@ -125,13 +127,15 @@ def createLivySession(request):
             # Create a session
             livy_token = getLivyToken(request)
             livy = livyGetOrCreate(livy_token)
+             
             api_result = livy.create_session(
                 data={
                     # Ideally, use unique session name
                     "name": livy_session_name_prefix + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
-                    "kind": "pyspark", 
-                    "archives": [], 
-                    "conf": json.loads(livy_spark_conf),                                     
+                    "kind": "pyspark",
+                    "archives": [],
+                    "pyFiles": livy_backend_spark_dependencies.split(',') if livy_backend_spark_dependencies else [],
+                    "conf": json.loads(livy_spark_conf) if livy_spark_conf else {},
                     #"idleTimeout" : "10m", # Not working 
                     #"ttl": "10m", # Not working 
                     }
@@ -344,7 +348,11 @@ def getLivyToken(request):
             
             request.session['livy_token'] = livy_token
             request.session['livy_token_expiration_time'] = (datetime.now() + timedelta(seconds=int(token_expires_in))).strftime("%Y-%m-%d %H:%M:%S")
-                        
+            
+            # delete the livy global variable to reinitialize it with the new token
+            if 'livy' in globals():
+                del globals()['livy']
+                      
         return livy_token
     except requests.exceptions.RequestException as e:
         # production - use logs
