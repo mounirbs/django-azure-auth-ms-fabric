@@ -68,9 +68,32 @@ python manage.py runserver localhost:5000
 - If using Apache Livy 0.8, consider running some java_import before running any Spark code. See: [https://github.com/mounirbs/spark-livy/blob/main/python/livy/init_java_gateway.py#L11](https://github.com/mounirbs/spark-livy/blob/main/python/livy/init_java_gateway.py#L11) 
 - Both ttl and idleTimeout seems not working properly in Fabric/Apache Livy. For Apache Livy, the binaries from https://livy.apache.org/download/ where used. Maybe the binaries are not reflecting the code on the Apache Livy master branch: [https://livy.incubator.apache.org/docs/latest/rest-api.html](https://github.com/apache/incubator-livy/blob/master/docs/rest-api.md). Without using these parameters, the session does not timeout.
 - The code is not production ready, since it's not handling fully all the required exceptions. This is only a proof-of-concept!
-- Installing packages in Fabric:
-    - From the environment running all the sessions (can be managed on Fabric side).
-    - From the session: using the LIVY_SPARK_DEPENDENCIES environment variable, a list of comma separated absolute paths to the Python packages to be used in the Spark session.    
+- Installing packages when using Livy/Fabric:
+    - Option 1 (*Fabric only*): On a Fabric environment and by specify the environment ID in the Spark configuration using the LIVY_SPARK_CONF environment variable, for example: 
+      ```json
+      {"spark.fabric.environmentDetails" : "{\"id\": \"My_EnvironmentID\"}"}
+      ```
+      *Starting sessions will not benefit from the fast startup experience of the Starter Pool, but will use the environment ID specified in the Spark configuration.*
+    - Option 2 (*Fabric only*): Using a default Environment in the default Pool(Starter or Custom), you can add the Python packages to the environment using the Fabric UI. The packages will be available in all sessions that use this default environment. *Starting sessions will not benefit from the fast startup experience of the Starter Pool, but will use the environment ID specified in the Spark configuration.*
+    - Option 3 (*Apache Livy/Fabric*): From the session: using the LIVY_SPARK_DEPENDENCIES environment variable (for the Livy pyFiles configuration), a list of comma separated absolute paths to the Python packages to be used in the Spark session.
+    *Starting sessions will not benefit from the fast startup experience of the Starter Pool, but will use the environment ID specified in the Spark configuration.*
+    - Option 4 (*Apache Livy/Fabric*): Directly from a session that benefits from the fast startup experience of the Starter Pool and by running:
+      ```python
+      import subprocess
+      # If mypackage is on PyPi
+      print(subprocess.check_output(["pip", "install", "mypackage"]))
+
+      # If mypackage is on a wheel file on Fabric
+      from notebookutils import mssparkutils  
+      mssparkutils.fs.mount("abfss://...adfs_path../Files/packages/", "/packages")
+      
+      # This will return an absolute path to the mounted package folder (/synfs/notebook/xxx-yyy-zzz/packages)
+      print(subprocess.check_output(["pip", "install", "/synfs/notebook/xxx-yyy-zzz/packages/mypackage-0.1.0-py3-none-any.whl"]))
+
+      # Check installed packages      
+      print(subprocess.check_output(["pip", "list"]).decode("utf-8"))
+      ```
+      *Note: installing packages directly on a session may install the package only on the driver and not on executors. The best way to install packages properly is to do it before the session starts (option 1,2,3)*
 
 ## Reference
 - [https://learn.microsoft.com/en-us/fabric/data-engineering/get-started-api-livy-session](https://learn.microsoft.com/en-us/fabric/data-engineering/get-started-api-livy-session)

@@ -134,8 +134,17 @@ def createLivySession(request):
                     "name": livy_session_name_prefix + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
                     "kind": "pyspark",
                     "archives": [],
-                    "pyFiles": livy_backend_spark_dependencies.split(',') if livy_backend_spark_dependencies else [],
+                    # Adding dependencies to the driver and executors using pyFiles. Other possible options for Fabric is to use an EnvironmentID
+                    "pyFiles": livy_backend_spark_dependencies.split(',') if livy_backend_spark_dependencies else [],                    
                     "conf": json.loads(livy_spark_conf) if livy_spark_conf else {},
+                    # Uncomment if you would like to enable minimum values on Fabric side
+                    # Driver memory-Fabric: 7g, 14g, 28g, 56g, 112g, 224g, 200g, 400g
+                    #"driverMemory": "7g",
+                    #"driverCores": 1,
+                    # Executor memory-Fabric: 7g, 14g, 28g, 56g, 112g, 224g, 200g, 400g
+                    #"executorMemory": "7g",
+                    #"executorCores": 1,
+                    #"numExecutors": 1,
                     #"idleTimeout" : "10m", # Not working 
                     #"ttl": "10m", # Not working 
                     }
