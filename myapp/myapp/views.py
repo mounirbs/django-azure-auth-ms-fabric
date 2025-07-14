@@ -7,7 +7,6 @@ import json
 from datetime import datetime, timedelta
 from azure_auth.handlers import AuthHandler
 import msal
-from tomlkit import date
 from myapp.api.apache_livy import ApacheLivy
 
 from dotenv import load_dotenv
