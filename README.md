@@ -1,4 +1,4 @@
-# django-azure-auth-ms-fabric
+# django-ms-fabric-livy
 Running Spark using Apache Livy/Microsoft Fabric Livy endpoint. Based on Django authentication and using django-azure-auth
 
 ## Requirements
